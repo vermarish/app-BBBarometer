@@ -10,36 +10,45 @@ by appending to the sensor list... right?
 package com.example.bigbrotherbarometer;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.hardware.SensorManager;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEvent;
 import android.hardware.Sensor;
 
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Arrays;
+import java.util.Map;
+import java.util.TreeMap;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.room.Room;
 
 import android.view.Menu;
 import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
-    SensorManager sm = null;
-    TextView textView1 = null;
+    SensorManager sm;
+    TextView textView1;
     List<Sensor> sensors;
+    boolean recording;
+    List<Tidbit> data;
 
     SensorEventListener sel = new SensorEventListener() {
         public void onAccuracyChanged(Sensor sensor, int accuracy) {}
         public void onSensorChanged(SensorEvent event) {
             float[] values = event.values;
-            String display = Arrays.toString(values);
-            /*String display = "x: " + values[0] + "\n"
+            if (recording) {
+                int type = event.sensor.getType();
+                Tidbit tidbit = new Tidbit(type, event.timestamp, values);
+                data.add(tidbit);
+            }
+            String display = "x: " + values[0] + "\n"
                            + "y: " + values[1] + "\n"
-                           + "z: " + values[2] + "\n"
-                           + "p: " + values[3];
-            */
+                           + "z: " + values[2];
+
             textView1.setText(display);
         }
     };
@@ -49,42 +58,35 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
+        recording = false;
         /* Get a SensorManager instance */
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         textView1 = (TextView) findViewById(R.id.textView1);
 
         sensors = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
-
-
-
         sm.registerListener(sel, (Sensor) sensors.get(0), SensorManager.SENSOR_DELAY_NORMAL);
 
-        /*
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        // TODO create database
 
+        final Button button = findViewById(R.id.toggleRecording);
+        button.setOnClickListener(new View.OnClickListener() {
+           public void onClick(View v) {
+               recording = !recording;
+               if (recording) {
+                   data = new LinkedList<>();
+               } else {
+                   textView1.setText("Logging...");
+                   TidbitDao dao = db.tidbitDao();
+                   for (Tidbit tidbit : data) {
 
-        // Get a SensorManager instance
-        sm = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-        textView1 = (TextView) findViewById(R.id.textView1);
-
-        sensors.addAll(sm.getSensorList(Sensor.TYPE_ACCELEROMETER));
-        sensors.addAll(sm.getSensorList(Sensor.TYPE_PRESSURE));
-        sensors.addAll(sm.getSensorList(Sensor.TYPE_GYROSCOPE));
-
-
-
-
-        for (int i = 0; i < sensors.size(); i++) {
-            sm.registerListener(sel, (Sensor) sensors.get(i), SensorManager.SENSOR_DELAY_NORMAL);
-        }
-        // The above block assumes all sensors are present. Otherwise, the indices of the
-        // SensorEvent values will be misaligned.
-
-         */
+                   }
+                   // write the data to database
+                   // empty the data field
+                   textView1.setText("Logged!");
+               }
+           }
+        });
     }
 
     @Override
