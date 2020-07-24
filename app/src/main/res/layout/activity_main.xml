@@ -24,4 +24,12 @@
         android:layout_marginLeft="120dp"
         android:layout_marginTop="180dp"
         android:text="@string/start" />  <!--TODO does text need to be @string? or can it be Java.lang.String?-->
+    <Button
+        android:id="@+id/logData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="240dp"
+        android:layout_marginTop="180dp"
+        android:text="@string/log"
+        />
 </RelativeLayout>

@@ -16,4 +16,7 @@ public interface TidbitDao {
 
     @Insert
     void insertAll(Tidbit... tidbits);
+
+    @Insert
+    void insert(Tidbit tidbit);
 }

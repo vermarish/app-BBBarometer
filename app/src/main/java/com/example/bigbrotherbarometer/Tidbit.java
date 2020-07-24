@@ -30,6 +30,21 @@ public class Tidbit {
     }
 
     @Ignore
+    public Tidbit(int sensorType, long time, float data1, float data2) {
+        this.sensorType = sensorType;
+        this.time = time;
+        this.data1 = data1;
+        this.data2 = data2;
+    }
+
+    @Ignore
+    public Tidbit(int sensorType, long time, float data1) {
+        this.sensorType = sensorType;
+        this.time = time;
+        this.data1 = data1;
+    }
+
+    @Ignore
     public Tidbit(int sensorType, long time, float[] data) {
         this.data1 = data[0];
         if (data.length >= 2) {
@@ -84,5 +99,14 @@ public class Tidbit {
 
     public void setData3(float data3) {
         this.data3 = data3;
+    }
+
+    @Override
+    public String toString() {
+        return sensorType +
+                "," + time +
+                "," + data1 +
+                "," + data2 +
+                "," + data3;
     }
 }

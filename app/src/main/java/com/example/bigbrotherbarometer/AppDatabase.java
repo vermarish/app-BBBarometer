@@ -6,7 +6,7 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {Tidbit.class}, version = 2)
+@Database(entities = Tidbit.class, version = 2)
 public abstract class AppDatabase extends RoomDatabase {
     private static final String DB_NAME = "tidbit_db";
     private static AppDatabase instance;
@@ -15,7 +15,8 @@ public abstract class AppDatabase extends RoomDatabase {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
                     AppDatabase.class, DB_NAME)
-                    .fallbackToDestructiveMigration() // TODO ?
+                    .fallbackToDestructiveMigration()
+                    .allowMainThreadQueries()  // TODO bad practice?
                     .build();
         }
         return instance;

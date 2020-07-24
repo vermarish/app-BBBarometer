@@ -9,20 +9,36 @@ by appending to the sensor list... right?
 
 package com.example.bigbrotherbarometer;
 
+import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
 import android.widget.TextView;
 import android.hardware.SensorManager;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEvent;
 import android.hardware.Sensor;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.channels.FileChannel;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.room.Room;
 
@@ -30,11 +46,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
+    private final int TYPE_TOUCH = -1;
     SensorManager sm;
     TextView textView1;
     List<Sensor> sensors;
     boolean recording;
-    List<Tidbit> data;
+    List<Tidbit> data;  // TODO optimize List -> Set
 
     SensorEventListener sel = new SensorEventListener() {
         public void onAccuracyChanged(Sensor sensor, int accuracy) {}
@@ -67,27 +84,98 @@ public class MainActivity extends AppCompatActivity {
         sensors = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
         sm.registerListener(sel, (Sensor) sensors.get(0), SensorManager.SENSOR_DELAY_NORMAL);
 
-        // TODO create database
-
-        final Button button = findViewById(R.id.toggleRecording);
-        button.setOnClickListener(new View.OnClickListener() {
+        final Button toggle = findViewById(R.id.toggleRecording);
+        toggle.setOnClickListener(new View.OnClickListener() {
            public void onClick(View v) {
-               recording = !recording;
-               if (recording) {
-                   data = new LinkedList<>();
-               } else {
-                   textView1.setText("Logging...");
-                   TidbitDao dao = db.tidbitDao();
-                   for (Tidbit tidbit : data) {
-
-                   }
-                   // write the data to database
-                   // empty the data field
-                   textView1.setText("Logged!");
-               }
+               toggle();
            }
         });
+
+
+        final Button logger = findViewById(R.id.logData);
+        logger.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                log();
+            }
+        });
+
+        final RelativeLayout layout  = findViewById(R.id.relativeLayout);
+        layout.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                if (recording) {
+                    Tidbit tidbit = new Tidbit(TYPE_TOUCH, event.getDownTime(),
+                            event.getX(), event.getY());
+                    data.add(tidbit);
+                }
+                return true;
+            }
+        });
     }
+
+    /* Create csv file from internal database */
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    private void log() {
+        AppDatabase db = AppDatabase.getInstance(this);
+        TidbitDao dao = db.tidbitDao();
+        List<Tidbit> tidbits = dao.tidbits();
+
+        String filename = "db " + timeString() + ".csv";
+
+        File file = new File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), filename);
+
+        try {
+            OutputStream os = new FileOutputStream(file);
+            for (Tidbit tidbit : tidbits) {
+                String line = tidbit.toString() + "\n";
+                os.write(line.getBytes()); // charset unspecified; may not use the correct encoding.
+            }
+            os.close();
+        } catch (IOException e) {
+            Log.w("ExternalStorage", "Error writing " + file, e);
+        }
+    }
+
+    /* Returns M-D-YYYY H-M-S
+    *  No leading zeros*/
+    private String timeString() {
+        Calendar calendar = Calendar.getInstance();
+        int month = calendar.get(Calendar.MONTH) + 1;
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        int year = calendar.get(Calendar.YEAR) + 1900;
+        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        int minute = calendar.get(Calendar.MINUTE);
+        int second = calendar.get(Calendar.SECOND);
+
+        String date = month + "-" + day + "-" + year;
+        String time = hour + "-" + minute + "-" + second;
+
+        return date + " " + time;
+    }
+
+    private void toggle() {
+        Button toggle = findViewById(R.id.toggleRecording);
+        recording = !recording;
+        if (recording) {
+            System.out.println("Recording...");
+            data = new LinkedList<>();
+            toggle.setText("STOP");
+        } else {
+            Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
+
+            // write the data to database
+            AppDatabase db = AppDatabase.getInstance(this);
+            TidbitDao dao = db.tidbitDao();
+            for (Tidbit tidbit : data) {
+                dao.insert(tidbit);
+            }
+            // empty the data field
+            data = null;
+            Toast.makeText(MainActivity.this, "Logged!", Toast.LENGTH_SHORT).show();
+            toggle.setText("START");
+        }
+    }
+
 
     @Override
     protected void onStop() {
