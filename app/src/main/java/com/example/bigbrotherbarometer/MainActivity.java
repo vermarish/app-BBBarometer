@@ -94,18 +94,21 @@ public class MainActivity extends AppCompatActivity {
 
         final Button logger = findViewById(R.id.logData);
         logger.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onClick(View view) {
                 log();
             }
         });
 
-        final RelativeLayout layout  = findViewById(R.id.relativeLayout);
-        layout.setOnTouchListener(new View.OnTouchListener() {
+//        final TextView touchWindow  = findViewById(R.id.touchWindow);
+        final RelativeLayout relativeLayout = findViewById(R.id.relativeLayout);
+        relativeLayout.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent event) {
                 if (recording) {
                     Tidbit tidbit = new Tidbit(TYPE_TOUCH, event.getDownTime(),
                             event.getX(), event.getY());
+                    System.out.println(tidbit);
                     data.add(tidbit);
                 }
                 return true;
@@ -142,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
         Calendar calendar = Calendar.getInstance();
         int month = calendar.get(Calendar.MONTH) + 1;
         int day = calendar.get(Calendar.DAY_OF_MONTH);
-        int year = calendar.get(Calendar.YEAR) + 1900;
+        int year = calendar.get(Calendar.YEAR);
         int hour = calendar.get(Calendar.HOUR_OF_DAY);
         int minute = calendar.get(Calendar.MINUTE);
         int second = calendar.get(Calendar.SECOND);
