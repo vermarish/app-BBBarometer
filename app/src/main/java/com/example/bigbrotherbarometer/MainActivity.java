@@ -9,7 +9,6 @@ by appending to the sensor list... right?
 
 package com.example.bigbrotherbarometer;
 
-import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -26,21 +25,18 @@ import android.hardware.SensorEvent;
 import android.hardware.Sensor;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.Set;
+import java.util.TreeSet;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.room.Room;
 
 import android.view.Menu;
 import android.view.MenuItem;
@@ -51,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     TextView textView1;
     List<Sensor> sensors;
     boolean recording;
-    List<Tidbit> data;  // TODO optimize List -> Set
+    Set<Tidbit> data;  // TODO optimize List -> Set
 
     SensorEventListener sel = new SensorEventListener() {
         public void onAccuracyChanged(Sensor sensor, int accuracy) {}
@@ -62,11 +58,20 @@ public class MainActivity extends AppCompatActivity {
                 Tidbit tidbit = new Tidbit(type, event.timestamp, values);
                 data.add(tidbit);
             }
-            String display = "x: " + values[0] + "\n"
-                           + "y: " + values[1] + "\n"
-                           + "z: " + values[2];
 
-            textView1.setText(display);
+            textView1.setText(valueString(values));
+        }
+        private String valueString(float[] values) {
+            if (values.length == 1) {
+                return "" + values[0];
+            } else if (values.length == 2) {
+                return "x: " + values[0] + "\n"
+                        + "y: " + values[1];
+            } else if (values.length == 3) {
+                return "x: " + values[0] + "\n"
+                        + "y: " + values[1] + "\n"
+                        + "z: " + values[2];
+            } else return Arrays.toString(values);
         }
     };
 
@@ -81,8 +86,16 @@ public class MainActivity extends AppCompatActivity {
 
         textView1 = (TextView) findViewById(R.id.textView1);
 
-        sensors = sm.getSensorList(Sensor.TYPE_ACCELEROMETER);
-        sm.registerListener(sel, (Sensor) sensors.get(0), SensorManager.SENSOR_DELAY_NORMAL);
+        sensors = new LinkedList<Sensor>();
+        sensors.add(sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE));
+        sensors.add(sm.getDefaultSensor(Sensor.TYPE_PRESSURE));
+        sensors.add(sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
+
+        for (Sensor sensor : sensors) {
+            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_PRESSURE), SensorManager.SENSOR_DELAY_NORMAL);
+            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+        }
 
         final Button toggle = findViewById(R.id.toggleRecording);
         toggle.setOnClickListener(new View.OnClickListener() {
@@ -90,7 +103,6 @@ public class MainActivity extends AppCompatActivity {
                toggle();
            }
         });
-
 
         final Button logger = findViewById(R.id.logData);
         logger.setOnClickListener(new View.OnClickListener() {
@@ -101,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-//        final TextView touchWindow  = findViewById(R.id.touchWindow);
         final RelativeLayout relativeLayout = findViewById(R.id.relativeLayout);
         relativeLayout.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent event) {
@@ -161,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
         recording = !recording;
         if (recording) {
             System.out.println("Recording...");
-            data = new LinkedList<>();
+            data = new TreeSet<>();
             toggle.setText("STOP");
         } else {
             Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();

@@ -8,7 +8,7 @@ import androidx.room.Index;
 @Entity(tableName = "tidbit",
         primaryKeys = {"sensor_type", "time"},
         indices = {@Index(value = "time")})
-public class Tidbit {
+public class Tidbit implements Comparable<Tidbit> {
     @ColumnInfo(name = "sensor_type")
     public int sensorType;
 
@@ -59,6 +59,10 @@ public class Tidbit {
         }
         this.sensorType = sensorType;
         this.time = time;
+    }
+
+    public int compareTo(Tidbit other) {
+        return (int) (this.getTime() - other.getTime());
     }
 
     public int getSensorType() {
