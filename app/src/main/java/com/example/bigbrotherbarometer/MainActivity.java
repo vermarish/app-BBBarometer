@@ -42,7 +42,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
-    private final int TYPE_TOUCH = -1;
+    private final int TYPE_TOUCH = -27;
+    private AppDatabase db;
+    private TidbitDao dao;
     SensorManager sm;
     TextView textView1;
     List<Sensor> sensors;
@@ -81,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         recording = false;
+        db = AppDatabase.getInstance(this);
+        dao = db.tidbitDao();
         /* Get a SensorManager instance */
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 
@@ -130,14 +134,12 @@ public class MainActivity extends AppCompatActivity {
     /* Create csv file from internal database */
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void log() {
-        AppDatabase db = AppDatabase.getInstance(this);
-        TidbitDao dao = db.tidbitDao();
         List<Tidbit> tidbits = dao.tidbits();
 
         String filename = "db " + timeString() + ".csv";
 
         File file = new File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), filename);
-
+        String filepath = file.getPath();
         try {
             OutputStream os = new FileOutputStream(file);
             for (Tidbit tidbit : tidbits) {
@@ -145,6 +147,8 @@ public class MainActivity extends AppCompatActivity {
                 os.write(line.getBytes()); // charset unspecified; may not use the correct encoding.
             }
             os.close();
+            Toast.makeText(MainActivity.this, tidbits.size() + " tidbits stored to " + filepath,
+                    Toast.LENGTH_LONG).show();
         } catch (IOException e) {
             Log.w("ExternalStorage", "Error writing " + file, e);
         }
@@ -178,8 +182,6 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
 
             // write the data to database
-            AppDatabase db = AppDatabase.getInstance(this);
-            TidbitDao dao = db.tidbitDao();
             for (Tidbit tidbit : data) {
                 dao.insert(tidbit);
             }
@@ -196,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
         if (sensors.size() > 0) {
             sm.unregisterListener(sel);
         }
+        dao.emptyTables();
         super.onStop();
     }
 

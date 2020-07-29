@@ -1,6 +1,7 @@
 package com.example.bigbrotherbarometer;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
 
@@ -19,4 +20,7 @@ public interface TidbitDao {
 
     @Insert
     void insert(Tidbit tidbit);
+
+    @Query("DELETE FROM tidbit WHERE 1=1")
+    void emptyTables();
 }
