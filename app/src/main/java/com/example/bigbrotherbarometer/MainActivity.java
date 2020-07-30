@@ -1,17 +1,9 @@
-/*
-
-Gotta change one line at a time to implement multiple sensors.
-Can one SensorEventListener be registered with multiple sensors?
-I think so, because that's how the accelerometer sensors work;
-there are three distinct sensors, so I should be able to add a fourth easily
-by appending to the sensor list... right?
- */
-
 package com.example.bigbrotherbarometer;
 
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -45,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private final int TYPE_TOUCH = -27;
     private AppDatabase db;
     private TidbitDao dao;
+    private long dT;
     SensorManager sm;
     TextView textView1;
     List<Sensor> sensors;
@@ -77,18 +70,23 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        long elapsedRealTimeNanos = SystemClock.elapsedRealtimeNanos();
+        long uptimeMillis = SystemClock.uptimeMillis();
+        dT = elapsedRealTimeNanos - uptimeMillis*1000;
+
         recording = false;
+
         db = AppDatabase.getInstance(this);
         dao = db.tidbitDao();
-        /* Get a SensorManager instance */
+
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 
-        textView1 = (TextView) findViewById(R.id.textView1);
 
         sensors = new LinkedList<Sensor>();
         sensors.add(sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE));
@@ -121,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
         relativeLayout.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent event) {
                 if (recording) {
-                    Tidbit tidbit = new Tidbit(TYPE_TOUCH, event.getDownTime(),
+                    Tidbit tidbit = new Tidbit(TYPE_TOUCH, motionTimeToSensorTime(event.getDownTime()),
                             event.getX(), event.getY());
                     System.out.println(tidbit);
                     data.add(tidbit);
@@ -129,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+        textView1 = (TextView) findViewById(R.id.textView1);
     }
 
     /* Create csv file from internal database */
@@ -142,6 +141,8 @@ public class MainActivity extends AppCompatActivity {
         String filepath = file.getPath();
         try {
             OutputStream os = new FileOutputStream(file);
+            String firstline = "type,time,one,two,three\n";
+            os.write(firstline.getBytes());
             for (Tidbit tidbit : tidbits) {
                 String line = tidbit.toString() + "\n";
                 os.write(line.getBytes()); // charset unspecified; may not use the correct encoding.
@@ -169,6 +170,10 @@ public class MainActivity extends AppCompatActivity {
         String time = hour + "-" + minute + "-" + second;
 
         return date + " " + time;
+    }
+
+    private long motionTimeToSensorTime(long motionTime) {
+        return 1000*motionTime + dT;
     }
 
     private void toggle() {
