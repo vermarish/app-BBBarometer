@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     TextView textView1;
     List<Sensor> sensors;
     boolean recording;
-    Set<Tidbit> data;  // TODO optimize List -> Set
+    Set<Tidbit> data;
 
     SensorEventListener sel = new SensorEventListener() {
         public void onAccuracyChanged(Sensor sensor, int accuracy) {}
@@ -76,14 +76,25 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        long elapsedRealTimeNanos = SystemClock.elapsedRealtimeNanos();
+        db = AppDatabase.getInstance(this);
+        dao = db.tidbitDao();
+
+        final long elapsedRealTimeNanos = SystemClock.elapsedRealtimeNanos();
         long uptimeMillis = SystemClock.uptimeMillis();
-        dT = elapsedRealTimeNanos - uptimeMillis*1000;
+
+
+        final Button clock = findViewById(R.id.clock);
+        clock.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Tidbit millis = new Tidbit(-1, SystemClock.uptimeMillis(), 0);
+                Tidbit nanos = new Tidbit(-2, SystemClock.elapsedRealtimeNanos(), 0);
+                data.add(millis);
+                data.add(nanos);
+            }
+        });
 
         recording = false;
 
-        db = AppDatabase.getInstance(this);
-        dao = db.tidbitDao();
 
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
 
@@ -94,9 +105,9 @@ public class MainActivity extends AppCompatActivity {
         sensors.add(sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
 
         for (Sensor sensor : sensors) {
-            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
-            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_PRESSURE), SensorManager.SENSOR_DELAY_NORMAL);
-            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_FASTEST);
+            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_PRESSURE), SensorManager.SENSOR_DELAY_FASTEST);
+            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST);
         }
 
         final Button toggle = findViewById(R.id.toggleRecording);
@@ -119,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         relativeLayout.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent event) {
                 if (recording) {
-                    Tidbit tidbit = new Tidbit(TYPE_TOUCH, motionTimeToSensorTime(event.getDownTime()),
+                    Tidbit tidbit = new Tidbit(TYPE_TOUCH,  event.getDownTime(), //motionTimeToSensorTime(event.getDownTime() % MOD),
                             event.getX(), event.getY());
                     System.out.println(tidbit);
                     data.add(tidbit);
@@ -173,19 +184,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private long motionTimeToSensorTime(long motionTime) {
-        return 1000*motionTime + dT;
+        return 100000*motionTime + dT;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     private void toggle() {
         Button toggle = findViewById(R.id.toggleRecording);
         recording = !recording;
         if (recording) {
             System.out.println("Recording...");
             data = new TreeSet<>();
+            timestamp();
             toggle.setText("STOP");
         } else {
             Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
-
+            timestamp();
             // write the data to database
             for (Tidbit tidbit : data) {
                 dao.insert(tidbit);
@@ -195,6 +208,17 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "Logged!", Toast.LENGTH_SHORT).show();
             toggle.setText("START");
         }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
+    private void timestamp() {
+        Tidbit millis = new Tidbit(-1, SystemClock.uptimeMillis(), 0);
+        Tidbit nanos = new Tidbit(-2, SystemClock.elapsedRealtimeNanos(), 0);
+        dT = SystemClock.elapsedRealtimeNanos() - SystemClock.uptimeMillis()*1000000;
+        data.add(millis);
+        data.add(nanos);
+        Tidbit delta = new Tidbit(-3, dT, 0);
+        data.add(delta);
     }
 
 
