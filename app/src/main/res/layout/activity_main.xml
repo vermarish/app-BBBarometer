@@ -7,22 +7,22 @@
     android:id="@+id/relativeLayout"
     tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/textView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="114dp"
-        android:text="TextView" />
-    <Button
-        android:id="@+id/clock"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_above="@+id/toggleRecording"
-        android:layout_marginBottom="10dp"
-        android:text="Clock"
-        />
+<!--    <TextView-->
+<!--        android:id="@+id/textView1"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_centerHorizontal="true"-->
+<!--        android:layout_marginTop="114dp"-->
+<!--        android:text="TextView" />-->
+<!--    <Button-->
+<!--        android:id="@+id/clock"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_centerHorizontal="true"-->
+<!--        android:layout_above="@+id/toggleRecording"-->
+<!--        android:layout_marginBottom="10dp"-->
+<!--        android:text="Clock"-->
+<!--        />-->
 
     <Button
         android:id="@+id/toggleRecording"
@@ -31,19 +31,20 @@
         android:layout_centerInParent="true"
         android:layout_marginLeft="100dp"
         android:text="@string/start" />  <!--TODO does text need to be @string? or can it be Java.lang.String?-->
-    <Button
-        android:id="@+id/logData"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_below="@+id/toggleRecording"
-        android:layout_centerHorizontal="true"
-        android:text="@string/log"
-        />
+<!--    <Button-->
+<!--        android:id="@+id/logData"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginTop="10dp"-->
+<!--        android:layout_below="@+id/toggleRecording"-->
+<!--        android:layout_centerHorizontal="true"-->
+<!--        android:text="@string/log"-->
+<!--        />-->
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@id/logData"
+        android:layout_marginTop="55dp"
+        android:layout_alignTop="@id/toggleRecording"
         android:src="@drawable/numpad"
         />
 </RelativeLayout>

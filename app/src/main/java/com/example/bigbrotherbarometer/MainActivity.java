@@ -37,9 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private final int TYPE_TOUCH = -27;
     private AppDatabase db;
     private TidbitDao dao;
-    private long dT;
     SensorManager sm;
-    TextView textView1;
     List<Sensor> sensors;
     boolean recording;
     Set<Tidbit> data;
@@ -53,8 +51,6 @@ public class MainActivity extends AppCompatActivity {
                 Tidbit tidbit = new Tidbit(type, event.timestamp, values);
                 data.add(tidbit);
             }
-
-            textView1.setText(valueString(values));
         }
         private String valueString(float[] values) {
             if (values.length == 1) {
@@ -70,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,19 +75,9 @@ public class MainActivity extends AppCompatActivity {
         db = AppDatabase.getInstance(this);
         dao = db.tidbitDao();
 
-        final long elapsedRealTimeNanos = SystemClock.elapsedRealtimeNanos();
-        long uptimeMillis = SystemClock.uptimeMillis();
+        // final long elapsedRealTimeNanos = SystemClock.elapsedRealtimeNanos();
+        // long uptimeMillis = SystemClock.uptimeMillis();
 
-
-        final Button clock = findViewById(R.id.clock);
-        clock.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Tidbit millis = new Tidbit(-1, SystemClock.uptimeMillis(), 0);
-                Tidbit nanos = new Tidbit(-2, SystemClock.elapsedRealtimeNanos(), 0);
-                data.add(millis);
-                data.add(nanos);
-            }
-        });
 
         recording = false;
 
@@ -117,20 +103,13 @@ public class MainActivity extends AppCompatActivity {
            }
         });
 
-        final Button logger = findViewById(R.id.logData);
-        logger.setOnClickListener(new View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-            @Override
-            public void onClick(View view) {
-                log();
-            }
-        });
-
         final RelativeLayout relativeLayout = findViewById(R.id.relativeLayout);
         relativeLayout.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent event) {
                 if (recording) {
-                    Tidbit tidbit = new Tidbit(TYPE_TOUCH,  event.getDownTime(), //motionTimeToSensorTime(event.getDownTime() % MOD),
+                    // event.getDownTime() uses a different clock than the sensor clock. That's okay,
+                    // we can just fix this in R using two clocking tidbits.
+                    Tidbit tidbit = new Tidbit(TYPE_TOUCH,  event.getDownTime(),
                             event.getX(), event.getY());
                     System.out.println(tidbit);
                     data.add(tidbit);
@@ -138,7 +117,30 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
-        textView1 = (TextView) findViewById(R.id.textView1);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    private void toggle() {
+        Button toggle = findViewById(R.id.toggleRecording);
+        recording = !recording;
+        if (recording) {
+            System.out.println("Recording...");
+            data = new TreeSet<>();
+            timestamp();
+            toggle.setText("STOP");
+        } else {
+            Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
+            timestamp();
+            // write the data to database
+            for (Tidbit tidbit : data) {
+                dao.insert(tidbit);
+            }
+            // empty the data field
+            data = null;
+            // Toast.makeText(MainActivity.this, "Logged!", Toast.LENGTH_SHORT).show();
+            toggle.setText("START");
+            this.log();
+        }
     }
 
     /* Create csv file from internal database */
@@ -183,42 +185,14 @@ public class MainActivity extends AppCompatActivity {
         return date + " " + time;
     }
 
-    private long motionTimeToSensorTime(long motionTime) {
-        return 100000*motionTime + dT;
-    }
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
-    private void toggle() {
-        Button toggle = findViewById(R.id.toggleRecording);
-        recording = !recording;
-        if (recording) {
-            System.out.println("Recording...");
-            data = new TreeSet<>();
-            timestamp();
-            toggle.setText("STOP");
-        } else {
-            Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
-            timestamp();
-            // write the data to database
-            for (Tidbit tidbit : data) {
-                dao.insert(tidbit);
-            }
-            // empty the data field
-            data = null;
-            Toast.makeText(MainActivity.this, "Logged!", Toast.LENGTH_SHORT).show();
-            toggle.setText("START");
-        }
-    }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     private void timestamp() {
         Tidbit millis = new Tidbit(-1, SystemClock.uptimeMillis(), 0);
         Tidbit nanos = new Tidbit(-2, SystemClock.elapsedRealtimeNanos(), 0);
-        dT = SystemClock.elapsedRealtimeNanos() - SystemClock.uptimeMillis()*1000000;
         data.add(millis);
         data.add(nanos);
-        Tidbit delta = new Tidbit(-3, dT, 0);
-        data.add(delta);
     }
 
 
