@@ -75,26 +75,18 @@ public class MainActivity extends AppCompatActivity {
         db = AppDatabase.getInstance(this);
         dao = db.tidbitDao();
 
-        // final long elapsedRealTimeNanos = SystemClock.elapsedRealtimeNanos();
-        // long uptimeMillis = SystemClock.uptimeMillis();
-
-
         recording = false;
 
-
+        // Get sensors and register listeners
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-
         sensors = new LinkedList<Sensor>();
-        sensors.add(sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE));
-        sensors.add(sm.getDefaultSensor(Sensor.TYPE_PRESSURE));
-        sensors.add(sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER));
-
-        for (Sensor sensor : sensors) {
-            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_FASTEST);
-            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_PRESSURE), SensorManager.SENSOR_DELAY_FASTEST);
-            sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST);
+        int[] sensorCodes = {Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_PRESSURE, Sensor.TYPE_GYROSCOPE};
+        for (int sensorCode : sensorCodes) {
+            Sensor currSensor = sm.getDefaultSensor(sensorCode);
+            sensors.add(currSensor);
+            sm.registerListener(sel, currSensor, SensorManager.SENSOR_DELAY_FASTEST);
         }
+
 
         final Button toggle = findViewById(R.id.toggleRecording);
         toggle.setOnClickListener(new View.OnClickListener() {
@@ -118,6 +110,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void switchPhase() {
+
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void toggle() {
