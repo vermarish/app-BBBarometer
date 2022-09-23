@@ -14,15 +14,24 @@
 <!--        android:layout_centerHorizontal="true"-->
 <!--        android:layout_marginTop="114dp"-->
 <!--        android:text="TextView" />-->
-<!--    <Button-->
-<!--        android:id="@+id/clock"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_centerHorizontal="true"-->
-<!--        android:layout_above="@+id/toggleRecording"-->
-<!--        android:layout_marginBottom="10dp"-->
-<!--        android:text="Clock"-->
-<!--        />-->
+    <Button
+        android:id="@+id/phaseSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@+id/currentPhase"
+        android:text="Phase"
+        />
+
+    <TextView
+        android:id="@+id/currentPhase"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@+id/toggleRecording"
+        android:layout_marginBottom="40dp"
+        android:text="collecting data"
+        />
 
     <Button
         android:id="@+id/toggleRecording"
@@ -41,6 +50,7 @@
 <!--        android:text="@string/log"-->
 <!--        />-->
     <ImageView
+        android:id="@+id/field"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="55dp"

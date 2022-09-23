@@ -1,5 +1,7 @@
 package com.example.bigbrotherbarometer;
 
+import android.annotation.SuppressLint;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -8,9 +10,10 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.hardware.SensorManager;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorEvent;
@@ -35,11 +38,21 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
     private final int TYPE_TOUCH = -27;
+    private final String[] phaseNames = {"diglett", "10key"};
+    // Views and widgets
+    private RelativeLayout relativeLayout;
+    private Button phaseSwitch;
+    private TextView currentPhase;
+    private Button toggleRecording;
+    private ImageView field;
+
     private AppDatabase db;
     private TidbitDao dao;
     SensorManager sm;
     List<Sensor> sensors;
     boolean recording;
+    int currentPhaseID;
+
     Set<Tidbit> data;
 
     SensorEventListener sel = new SensorEventListener() {
@@ -66,16 +79,24 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    @SuppressLint("ClickableViewAccessibility")
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        this.relativeLayout = findViewById(R.id.relativeLayout);
+        this.phaseSwitch = findViewById(R.id.phaseSwitch);
+        this.currentPhase = findViewById(R.id.currentPhase);
+        this.toggleRecording = findViewById(R.id.toggleRecording);
+        this.field = findViewById(R.id.field);
+
         db = AppDatabase.getInstance(this);
         dao = db.tidbitDao();
 
         recording = false;
+        currentPhaseID = 0;
 
         // Get sensors and register listeners
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -87,15 +108,20 @@ public class MainActivity extends AppCompatActivity {
             sm.registerListener(sel, currSensor, SensorManager.SENSOR_DELAY_FASTEST);
         }
 
+        // Create phase button, start with first phase
+        phaseSwitch.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                switchPhase();
+            }
+        });
+        switchPhaseTo(0);
 
-        final Button toggle = findViewById(R.id.toggleRecording);
-        toggle.setOnClickListener(new View.OnClickListener() {
+        toggleRecording.setOnClickListener(new View.OnClickListener() {
            public void onClick(View v) {
                toggle();
            }
         });
 
-        final RelativeLayout relativeLayout = findViewById(R.id.relativeLayout);
         relativeLayout.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent event) {
                 if (recording) {
@@ -111,20 +137,41 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void switchPhase() {
 
+    private void switchPhase() {
+        currentPhaseID = (currentPhaseID + 1) % phaseNames.length;
+        switchPhaseTo(currentPhaseID);
     }
 
+    private void switchPhaseTo(int phaseID) {
+        String phase = phaseNames[phaseID];
+        // TODO cd .. implement phases here!!
+        switch(phase) {
+            case "diglett":
+                // this.relativeLayout.setBackgroundColor(Color.parseColor("#009A17"));
+                this.relativeLayout.setBackgroundResource(R.drawable.grass);
+                this.currentPhase.setText(R.string.collecting);
+                this.currentPhase.setTextColor(Color.parseColor("#333333"));
+                // this.relativeLayout.setAlpha((float) 0.1);
+                this.field.setAlpha((float) 0);
+                break;
+            case "10key":
+                this.relativeLayout.setBackgroundColor(Color.parseColor("#080808"));
+                this.currentPhase.setText(R.string.cracking);
+                this.currentPhase.setTextColor(Color.parseColor("#BBBBBB"));
+                this.field.setAlpha((float) 1);
+                break;
+        }
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void toggle() {
-        Button toggle = findViewById(R.id.toggleRecording);
         recording = !recording;
         if (recording) {
             System.out.println("Recording...");
             data = new TreeSet<>();
             timestamp();
-            toggle.setText("STOP");
+            this.toggleRecording.setText("STOP");
         } else {
             Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
             timestamp();
@@ -135,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
             // empty the data field
             data = null;
             // Toast.makeText(MainActivity.this, "Logged!", Toast.LENGTH_SHORT).show();
-            toggle.setText("START");
+            this.toggleRecording.setText("START");
             this.log();
         }
     }
