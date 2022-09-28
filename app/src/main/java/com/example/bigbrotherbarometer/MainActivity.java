@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -38,6 +40,10 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
     private final int TYPE_TOUCH = -27;
+    private final float DIGLETT_VISIBLE = (float) 1;
+    private final float DIGLETT_HIDDEN = (float) 0;
+    private final float CIRCLE_VISIBLE = (float) 0.3;
+    private final float CIRCLE_HIDDEN = (float) 0;
     private final String[] phaseNames = {"diglett", "10key"};
     // Views and widgets
     private RelativeLayout relativeLayout;
@@ -45,6 +51,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView currentPhase;
     private Button toggleRecording;
     private ImageView field;
+    private ImageView[] digletts;
+    private Set<ImageView> hiddenDigletts;
+
 
     private AppDatabase db;
     private TidbitDao dao;
@@ -86,19 +95,30 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // get widgets, store as field variables
         this.relativeLayout = findViewById(R.id.relativeLayout);
         this.phaseSwitch = findViewById(R.id.phaseSwitch);
         this.currentPhase = findViewById(R.id.currentPhase);
         this.toggleRecording = findViewById(R.id.toggleRecording);
         this.field = findViewById(R.id.field);
+        this.digletts = new ImageView[10];
+        this.hiddenDigletts = new HashSet<ImageView>();
+        for (int i = 0; i < 10; i++) {
+            String diglettID = "diglett" + i;
+            int resid = getResources().getIdentifier(diglettID, "id", getPackageName());
+            ImageView diglett = (ImageView) findViewById(resid);
+            this.digletts[i] = diglett;
+            this.hiddenDigletts.add(diglett);
+        }
 
+        // initialize database
         db = AppDatabase.getInstance(this);
         dao = db.tidbitDao();
 
         recording = false;
         currentPhaseID = 0;
 
-        // Get sensors and register listeners
+        // Get sensors and register sensor listeners
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensors = new LinkedList<Sensor>();
         int[] sensorCodes = {Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_PRESSURE, Sensor.TYPE_GYROSCOPE};
@@ -108,6 +128,21 @@ public class MainActivity extends AppCompatActivity {
             sm.registerListener(sel, currSensor, SensorManager.SENSOR_DELAY_FASTEST);
         }
 
+        // Set listener to capture all touch input
+        relativeLayout.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                if (recording) {
+                    // event.getDownTime() uses a different clock than the sensor clock. That's okay,
+                    // we can just fix this in R using two clocking tidbits.
+                    Tidbit tidbit = new Tidbit(TYPE_TOUCH,  event.getDownTime(),
+                            event.getX(), event.getY());
+
+                    data.add(tidbit);
+                }
+                return true;
+            }
+        });
+
         // Create phase button, start with first phase
         phaseSwitch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -116,25 +151,24 @@ public class MainActivity extends AppCompatActivity {
         });
         switchPhaseTo(0);
 
+        // Create toggle button
         toggleRecording.setOnClickListener(new View.OnClickListener() {
            public void onClick(View v) {
                toggle();
            }
         });
 
-        relativeLayout.setOnTouchListener(new View.OnTouchListener() {
-            public boolean onTouch(View v, MotionEvent event) {
-                if (recording) {
-                    // event.getDownTime() uses a different clock than the sensor clock. That's okay,
-                    // we can just fix this in R using two clocking tidbits.
-                    Tidbit tidbit = new Tidbit(TYPE_TOUCH,  event.getDownTime(),
-                            event.getX(), event.getY());
-                    System.out.println(tidbit);
-                    data.add(tidbit);
+        // Make digletts disappear when touched
+        for (int i = 0; i < 10; i++) {
+            this.digletts[i].setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    double alpha = v.getAlpha();
+                    if (alpha != DIGLETT_HIDDEN) {
+                        whackDiglett((ImageView) v);
+                    }
                 }
-                return true;
-            }
-        });
+            });
+        }
     }
 
 
@@ -145,21 +179,24 @@ public class MainActivity extends AppCompatActivity {
 
     private void switchPhaseTo(int phaseID) {
         String phase = phaseNames[phaseID];
-        // TODO cd .. implement phases here!!
         switch(phase) {
             case "diglett":
-                // this.relativeLayout.setBackgroundColor(Color.parseColor("#009A17"));
                 this.relativeLayout.setBackgroundResource(R.drawable.grass);
                 this.currentPhase.setText(R.string.collecting);
                 this.currentPhase.setTextColor(Color.parseColor("#333333"));
-                // this.relativeLayout.setAlpha((float) 0.1);
                 this.field.setAlpha((float) 0);
+                for (int i = 0; i < 10; i++) {
+                    this.digletts[i].setImageResource(this.getResources().getIdentifier("diglett", "drawable", this.getPackageName()));
+                }
                 break;
             case "10key":
                 this.relativeLayout.setBackgroundColor(Color.parseColor("#080808"));
                 this.currentPhase.setText(R.string.cracking);
                 this.currentPhase.setTextColor(Color.parseColor("#BBBBBB"));
                 this.field.setAlpha((float) 1);
+                for (int i = 0; i < 10; i++) {
+                    this.digletts[i].setImageResource(this.getResources().getIdentifier("circle", "drawable", this.getPackageName()));
+                }
                 break;
         }
     }
@@ -168,10 +205,11 @@ public class MainActivity extends AppCompatActivity {
     private void toggle() {
         recording = !recording;
         if (recording) {
-            System.out.println("Recording...");
             data = new TreeSet<>();
             timestamp();
             this.toggleRecording.setText("STOP");
+            Thread game = new Game();
+            game.start();
         } else {
             Toast.makeText(MainActivity.this, "Logging..", Toast.LENGTH_SHORT).show();
             timestamp();
@@ -229,7 +267,25 @@ public class MainActivity extends AppCompatActivity {
         return date + " " + time;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public void spawnDiglett() {
+        if (hiddenDigletts.size() > 0) {
+            ImageView nextDiglett = hiddenDigletts.stream().skip(new Random().nextInt(hiddenDigletts.size())).findFirst().orElse(null);
+            if (nextDiglett != null) {
+                if (currentPhase.equals("diglett")) {
+                    nextDiglett.setAlpha(DIGLETT_VISIBLE);
+                } else {
+                    nextDiglett.setAlpha(CIRCLE_VISIBLE);
+                }
+                hiddenDigletts.remove(nextDiglett);
+            }
+        }
+    }
 
+    public void whackDiglett(ImageView diglett) {
+        diglett.setAlpha(DIGLETT_HIDDEN);
+        hiddenDigletts.add(diglett);
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     private void timestamp() {
@@ -238,6 +294,37 @@ public class MainActivity extends AppCompatActivity {
         data.add(millis);
         data.add(nanos);
     }
+
+    private class Game extends Thread {
+        private Random rand = new Random();
+        // private ImageView[] digletts;
+
+        @RequiresApi(api = Build.VERSION_CODES.N)
+        @Override
+        public void run() {
+            while (recording) {
+                this.snooze();
+                if (recording) {
+                    spawnDiglett();
+                }
+            }
+        }
+        private void snooze() {
+            double duration = 1000*(rexp(1));
+            try {
+                Thread.sleep((long) duration);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // returns duration in seconds
+        private double rexp(long lambda) {
+            double exp_value = Math.log(1-rand.nextDouble())/(-lambda);
+            return Math.max(Math.min(exp_value, 2), 0.1);
+        }
+    }
+
 
 
     @Override
@@ -270,4 +357,6 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+
 }

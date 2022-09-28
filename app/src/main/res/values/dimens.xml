@@ -7,5 +7,5 @@
     <dimen name="diglett_row2_top_margin">168dp</dimen>
     <dimen name="diglett_row3_top_margin">221dp</dimen>
     <dimen name="diglett_row4_top_margin">280dp</dimen>
-    <dimen name="diglett_alpha">0.9</dimen>
+    <dimen name="diglett_alpha">0</dimen>
 </resources>
