@@ -7,13 +7,16 @@
     android:id="@+id/relativeLayout"
     tools:context=".MainActivity">
 
-<!--    <TextView-->
-<!--        android:id="@+id/textView1"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_centerHorizontal="true"-->
-<!--        android:layout_marginTop="114dp"-->
-<!--        android:text="TextView" />-->
+    <TextView
+        android:id="@+id/inputCounter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="114dp"
+        android:text="0"
+        android:alpha="0"
+        android:textStyle="bold"
+        android:textSize="50dp"/>
     <Button
         android:id="@+id/phaseSwitch"
         android:layout_width="wrap_content"

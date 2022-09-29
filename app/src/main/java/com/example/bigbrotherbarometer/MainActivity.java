@@ -39,14 +39,24 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
+    // constants
     private final int TYPE_TOUCH = -27;
     private final float DIGLETT_VISIBLE = (float) 1;
     private final float DIGLETT_HIDDEN = (float) 0;
     private final float CIRCLE_VISIBLE = (float) 0.3;
     private final float CIRCLE_HIDDEN = (float) 0;
     private final String[] phaseNames = {"diglett", "10key"};
+    private final String DARK_TEXT = "#333333";
+    private final String LIGHT_TEXT = "#BBBBBB";
+
+    // initialized variables
+    private int numInputs = 0;
+    private boolean recording = false;
+    private int currentPhaseID = 0;
+
     // Views and widgets
     private RelativeLayout relativeLayout;
+    private TextView inputCounter;
     private Button phaseSwitch;
     private TextView currentPhase;
     private Button toggleRecording;
@@ -54,14 +64,11 @@ public class MainActivity extends AppCompatActivity {
     private ImageView[] digletts;
     private Set<ImageView> hiddenDigletts;
 
-
+    // objects
     private AppDatabase db;
     private TidbitDao dao;
     SensorManager sm;
     List<Sensor> sensors;
-    boolean recording;
-    int currentPhaseID;
-
     Set<Tidbit> data;
 
     SensorEventListener sel = new SensorEventListener() {
@@ -97,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
 
         // get widgets, store as field variables
         this.relativeLayout = findViewById(R.id.relativeLayout);
+        this.inputCounter = findViewById(R.id.inputCounter);
         this.phaseSwitch = findViewById(R.id.phaseSwitch);
         this.currentPhase = findViewById(R.id.currentPhase);
         this.toggleRecording = findViewById(R.id.toggleRecording);
@@ -114,9 +122,6 @@ public class MainActivity extends AppCompatActivity {
         // initialize database
         db = AppDatabase.getInstance(this);
         dao = db.tidbitDao();
-
-        recording = false;
-        currentPhaseID = 0;
 
         // Get sensors and register sensor listeners
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -183,7 +188,8 @@ public class MainActivity extends AppCompatActivity {
             case "diglett":
                 this.relativeLayout.setBackgroundResource(R.drawable.grass);
                 this.currentPhase.setText(R.string.collecting);
-                this.currentPhase.setTextColor(Color.parseColor("#333333"));
+                this.currentPhase.setTextColor(Color.parseColor(DARK_TEXT));
+                this.inputCounter.setTextColor(Color.parseColor("#F8F8F8"));
                 this.field.setAlpha((float) 0);
                 for (int i = 0; i < 10; i++) {
                     this.digletts[i].setImageResource(this.getResources().getIdentifier("diglett", "drawable", this.getPackageName()));
@@ -192,7 +198,9 @@ public class MainActivity extends AppCompatActivity {
             case "10key":
                 this.relativeLayout.setBackgroundColor(Color.parseColor("#080808"));
                 this.currentPhase.setText(R.string.cracking);
-                this.currentPhase.setTextColor(Color.parseColor("#BBBBBB"));
+                this.currentPhase.setTextColor(Color.parseColor(LIGHT_TEXT));
+                // this.inputCounter.setTextColor(Color.parseColor(LIGHT_TEXT));
+                this.inputCounter.setAlpha(0);  // input counter looks too "game-y" when cracking
                 this.field.setAlpha((float) 1);
                 for (int i = 0; i < 10; i++) {
                     this.digletts[i].setImageResource(this.getResources().getIdentifier("circle", "drawable", this.getPackageName()));
@@ -272,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
         if (hiddenDigletts.size() > 0) {
             ImageView nextDiglett = hiddenDigletts.stream().skip(new Random().nextInt(hiddenDigletts.size())).findFirst().orElse(null);
             if (nextDiglett != null) {
-                if (currentPhase.equals("diglett")) {
+                if (currentPhaseID == 0) {
                     nextDiglett.setAlpha(DIGLETT_VISIBLE);
                 } else {
                     nextDiglett.setAlpha(CIRCLE_VISIBLE);
@@ -285,6 +293,9 @@ public class MainActivity extends AppCompatActivity {
     public void whackDiglett(ImageView diglett) {
         diglett.setAlpha(DIGLETT_HIDDEN);
         hiddenDigletts.add(diglett);
+        numInputs++;
+        inputCounter.setAlpha((float) 0.85);
+        inputCounter.setText(Integer.toString(numInputs));
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
