@@ -165,12 +165,18 @@ public class MainActivity extends AppCompatActivity {
 
         // Make digletts disappear when touched
         for (int i = 0; i < 10; i++) {
-            this.digletts[i].setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
+            this.digletts[i].setOnTouchListener(new View.OnTouchListener() {
+                public boolean onTouch(View v, MotionEvent event) {
                     double alpha = v.getAlpha();
                     if (alpha != DIGLETT_HIDDEN) {
                         whackDiglett((ImageView) v);
                     }
+                    if (recording) {
+                        Tidbit tidbit = new Tidbit(TYPE_TOUCH, event.getDownTime(),
+                                event.getX(), event.getY());
+                        data.add(tidbit);
+                    }
+                    return true;
                 }
             });
         }
